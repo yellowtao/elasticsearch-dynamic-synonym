@@ -13,13 +13,13 @@
  */
 package com.ginobefunny.elasticsearch.plugins.synonym.service;
 
+import com.ginobefunny.elasticsearch.plugins.synonym.logging.ESLoggerFactory;
 import com.ginobefunny.elasticsearch.plugins.synonym.service.utils.Monitor;
 import org.apache.logging.log4j.Logger;
 import org.apache.lucene.analysis.Analyzer;
 import org.apache.lucene.analysis.TokenStream;
 import org.apache.lucene.analysis.tokenattributes.CharTermAttribute;
 import org.apache.lucene.analysis.tokenattributes.PositionIncrementAttribute;
-import org.elasticsearch.common.logging.ESLoggerFactory;
 
 import java.io.IOException;
 import java.util.*;

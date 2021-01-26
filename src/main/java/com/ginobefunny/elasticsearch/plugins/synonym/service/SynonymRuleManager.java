@@ -13,11 +13,15 @@
  */
 package com.ginobefunny.elasticsearch.plugins.synonym.service;
 
+import com.ginobefunny.elasticsearch.plugins.synonym.logging.ESLoggerFactory;
 import com.ginobefunny.elasticsearch.plugins.synonym.service.utils.JDBCUtils;
 import com.ginobefunny.elasticsearch.plugins.synonym.service.utils.Monitor;
 import org.apache.logging.log4j.Logger;
-import org.elasticsearch.common.logging.ESLoggerFactory;
+import org.elasticsearch.SpecialPermission;
 
+import java.security.AccessController;
+import java.security.PrivilegedAction;
+import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
@@ -79,8 +83,26 @@ public class SynonymRuleManager {
 
     private long loadSynonymRule() {
         try {
-            long currentMaxVersion = JDBCUtils.queryMaxSynonymRuleVersion(configuration.getDBUrl());
-            List<String> synonymRuleList = JDBCUtils.querySynonymRules(configuration.getDBUrl(), currentMaxVersion);
+            SpecialPermission.check();
+            long currentMaxVersion = AccessController.doPrivileged((PrivilegedAction<Long>) () -> {
+                try {
+                    return JDBCUtils.queryMaxSynonymRuleVersion(configuration.getDBUrl());
+                } catch (Exception e) {
+                    LOGGER.error(e.getMessage(), e);
+                }
+                return 0L;
+            });
+
+            SpecialPermission.check();
+            List<String> synonymRuleList = AccessController.doPrivileged((PrivilegedAction<List<String>>) () -> {
+                try {
+                    return JDBCUtils.querySynonymRules(configuration.getDBUrl(), currentMaxVersion);
+                } catch (Exception e) {
+                    LOGGER.error(e.getMessage(), e);
+                }
+                return Collections.emptyList();
+            });
+
             this.synonymMap = new SimpleSynonymMap(this.configuration);
             for (String rule : synonymRuleList) {
                 this.synonymMap.addRule(rule);
@@ -101,7 +123,16 @@ public class SynonymRuleManager {
         try {
             SynonymRuleManager tmpManager = new SynonymRuleManager();
             tmpManager.configuration = getSingleton().configuration;
-            List<String> synonymRuleList = JDBCUtils.querySynonymRules(configuration.getDBUrl(), maxVersion);
+
+            SpecialPermission.check();
+            List<String> synonymRuleList = AccessController.doPrivileged((PrivilegedAction<List<String>>) () -> {
+                try {
+                    return JDBCUtils.querySynonymRules(configuration.getDBUrl(), maxVersion);
+                } catch (Exception e) {
+                    LOGGER.error(e.getMessage(), e);
+                }
+                return Collections.emptyList();
+            });
             SimpleSynonymMap tempSynonymMap = new SimpleSynonymMap(tmpManager.configuration);
             for (String rule : synonymRuleList) {
                 tempSynonymMap.addRule(rule);

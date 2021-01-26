@@ -13,10 +13,14 @@
  */
 package com.ginobefunny.elasticsearch.plugins.synonym.service.utils;
 
+import com.ginobefunny.elasticsearch.plugins.synonym.logging.ESLoggerFactory;
 import com.ginobefunny.elasticsearch.plugins.synonym.service.Configuration;
 import com.ginobefunny.elasticsearch.plugins.synonym.service.SynonymRuleManager;
 import org.apache.logging.log4j.Logger;
-import org.elasticsearch.common.logging.ESLoggerFactory;
+import org.elasticsearch.SpecialPermission;
+
+import java.security.AccessController;
+import java.security.PrivilegedAction;
 
 /**
  * Created by ginozhang on 2017/1/12.
@@ -37,7 +41,15 @@ public class Monitor implements Runnable {
     @Override
     public void run() {
         try {
-            long currentMaxVersion = JDBCUtils.queryMaxSynonymRuleVersion(configuration.getDBUrl());
+            SpecialPermission.check();
+            long currentMaxVersion = AccessController.doPrivileged((PrivilegedAction<Long>) () -> {
+                try {
+                    return JDBCUtils.queryMaxSynonymRuleVersion(configuration.getDBUrl());
+                } catch (Exception e) {
+                    LOGGER.error(e.getMessage(), e);
+                }
+                return 0L;
+            });
             if (currentMaxVersion > lastUpdateVersion) {
                 if (SynonymRuleManager.getSingleton().reloadSynonymRule(currentMaxVersion)) {
                     lastUpdateVersion = currentMaxVersion;
